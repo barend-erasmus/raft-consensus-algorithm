@@ -4,7 +4,7 @@ Raft is a consensus algorithm designed as an alternative to Paxos. It was meant 
 
 ## The Basics
 
-All nodes starts as a `Follower` and will remain in this state until the `Heartbeat Timeout` has been exceeded.
+All nodes start as a `Follower` and will remain in this state until the `Heartbeat Timeout` has been exceeded.
 
 
 ![](https://github.com/barend-erasmus/raft-consensus-algorithm/raw/master/images/raft-consensus-algorithm-1.png)
@@ -26,4 +26,4 @@ When the `Election Timeout` has been exceeded, the node requests a vote from eac
 ![](https://github.com/barend-erasmus/raft-consensus-algorithm/raw/master/images/raft-consensus-algorithm-3.png)
 
 
-To be continued...
+A node will only vote if they haven't voted in this `Term` otherwise it will decline the vote. When the `Candidate` received votes from the majority of nodes, it will declare itself as the `Leader` and start sending a `Heartbeat` to the other nodes.
