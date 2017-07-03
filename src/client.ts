@@ -12,7 +12,7 @@ export class Client {
     public electionTimeoutTimestamp: number;
     private app: express.Application;
     private term: number;
-    private interval;
+    private interval: NodeJS.Timer;
 
     constructor(private port: number, private clients: string[]) {
         this.id = uuid.v4();
@@ -31,6 +31,8 @@ export class Client {
         });
     }
 
+    // Public Methods
+
     public start(): void {
 
         this.app.listen(this.port);
@@ -44,6 +46,25 @@ export class Client {
     public stop() {
         clearInterval(this.interval);
     }
+
+    // Express App Methods
+
+    private heartbeat(req: express.Request, res: express.Response): void {
+        this.resetHeartBeatTimeout();
+        if (!this.isFollower()) {
+            this.setAsFollower();
+        }
+
+        res.json();
+    }
+
+    private vote(req: express.Request, res: express.Response): void {
+        const result = req.query.term > this.term;
+
+        res.json(result);
+    }
+
+    // Interval Methods
 
     private cycle(): void {
         if (this.isFollower()) {
@@ -61,20 +82,7 @@ export class Client {
         }
     }
 
-    private heartbeat(req: express.Request, res: express.Response): void {
-        this.resetHeartBeatTimeout();
-        if (!this.isFollower()) {
-            this.setAsFollower();
-        }
-
-        res.json();
-    }
-
-    private vote(req: express.Request, res: express.Response): void {
-        const result = req.query.term > this.term;
-
-        res.json(result);
-    }
+    // Raft Algorithm Methods
 
     public sendVoteRequests(): void {
         const self = this;
@@ -108,6 +116,41 @@ export class Client {
         });
     }
 
+    private sendHeartbeat(): void {
+        for (const client of this.clients) {
+            request({
+                uri: `${client}/heartbeat`,
+                json: true
+            }).then((result: boolean) => {
+
+            }).catch((err: Error) => {
+                console.log(`Could not connect to ${client}`);
+            });
+        }
+    }
+
+    private hasExceededHeartbeatTimeout(): boolean {
+        return new Date().getTime() > this.heartbeatTimeoutTimestamp;
+    }
+
+    private hasExceededElectionTimeout(): boolean {
+        return new Date().getTime() > this.electionTimeoutTimestamp;
+    }
+
+    // Helper Methods
+
+    private resetHeartBeatTimeout(): void {
+        this.heartbeatTimeoutTimestamp = new Date().getTime() + 1000;
+    }
+
+    private clearHeartBeatTimeout(): void {
+        this.heartbeatTimeoutTimestamp = null;
+    }
+
+    private incrementTerm(): void {
+        this.term = this.term + 1;
+    }
+
     private setAsFollower(): void {
         this.state = 'follower';
         this.resetHeartBeatTimeout();
@@ -126,39 +169,6 @@ export class Client {
         this.electionTimeoutTimestamp = null;
     }
 
-    private hasExceededHeartbeatTimeout(): boolean {
-        return new Date().getTime() > this.heartbeatTimeoutTimestamp;
-    }
-
-    private hasExceededElectionTimeout(): boolean {
-        return new Date().getTime() > this.electionTimeoutTimestamp;
-    }
-
-    private resetHeartBeatTimeout(): void {
-        this.heartbeatTimeoutTimestamp = new Date().getTime() + 1000;
-    }
-
-    private clearHeartBeatTimeout(): void {
-        this.heartbeatTimeoutTimestamp = null;
-    }
-
-    private incrementTerm(): void {
-        this.term = this.term + 1;
-    }
-
-    private sendHeartbeat(): void {
-        for (const client of this.clients) {
-            request({
-                uri: `${client}/heartbeat`,
-                json: true
-            }).then((result: boolean) => {
-
-            }).catch((err: Error) => {
-                console.log(`Could not connect to ${client}`);
-            });
-        }
-    }
-
     private isFollower(): boolean {
         return this.state === 'follower';
     }
@@ -171,6 +181,7 @@ export class Client {
         return this.state === 'leader';
     }
 
+    // Other Methods
     private getRandomArbitrary(min: number, max: number) {
         return Math.random() * (max - min) + min;
     }
