@@ -24,5 +24,6 @@ The node also set its `Election Timeout` to a random value between 150ms - 300ms
 
 ### Candidate to Leader
 
-To be continued..
+When the `Election Timeout` has been exceeded, the node requests a vote from each of the nodes.
 
+![](https://github.com/barend-erasmus/raft-consensus-algorithm/raw/master/images/raft-consensus-algorithm-3.png)
