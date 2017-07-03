@@ -27,3 +27,8 @@ When the `Election Timeout` has been exceeded, the node requests a vote from eac
 
 
 A node will only vote if they haven't voted in this `Term` otherwise it will decline the vote. When the `Candidate` received votes from the majority of nodes, it will declare itself as the `Leader` and start sending a `Heartbeat` to the other nodes.
+
+## Where is the Raft Consensus Algorithm Used?
+
+* [Redis](https://redis.io/topics/cluster-spec)
+* [Consul](https://www.consul.io/docs/internals/consensus.html)
