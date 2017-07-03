@@ -2,28 +2,30 @@ export class Node {
 
     public state: string;
     public heartbeatTimeoutTimestamp: number;
-    public stateTimeoutTimestamp: number;
+    public electionTimeoutTimestamp: number;
+    public term: number;
 
     constructor() {
         this.setAsFollower();
+        this.term = 0;
     }
 
     public setAsFollower(): void {
         this.state = 'follower';
         this.setHeartBeatTimeout();
-        this.stateTimeoutTimestamp = null;
+        this.electionTimeoutTimestamp = null;
     }
 
     public setAsCandidate(): void {
         this.state = 'candidate';
         this.clearHeartBeatTimeout();
-        this.stateTimeoutTimestamp = new Date().getTime() + this.getRandomArbitrary(1000, 4000);
+        this.electionTimeoutTimestamp = new Date().getTime() + this.getRandomArbitrary(1000, 4000);
     }
 
     public setAsLeader(): void {
         this.state = 'leader';
         this.clearHeartBeatTimeout();
-        this.stateTimeoutTimestamp = null;
+        this.electionTimeoutTimestamp = null;
     }
 
     public hasExceededHeartbeatTimeout(): boolean {
@@ -31,7 +33,7 @@ export class Node {
     }
 
     public hasExceededStateTimeout(): boolean {
-        return new Date().getTime() > this.stateTimeoutTimestamp;
+        return new Date().getTime() > this.electionTimeoutTimestamp;
     }
 
     public setHeartBeatTimeout(): void {
@@ -44,9 +46,10 @@ export class Node {
 
     public sendVoteRequests(nodes: Node[]): void {
         let count = 0;
+        this.term = this.term + 1;
 
         for (const node of nodes) {
-            if (node.getVote()) {
+            if (node.getVote(this.term)) {
                 count = count + 1;
             }
         }
@@ -66,8 +69,8 @@ export class Node {
         }
     }
 
-    public getVote(): boolean {
-        return this.isLeader() ? false : true;
+    public getVote(term: number): boolean {
+        return term > this.term;
     }
 
     public isFollower(): boolean {

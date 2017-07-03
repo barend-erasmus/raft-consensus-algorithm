@@ -4,7 +4,8 @@
   "description": "Raft is a consensus algorithm designed as an alternative to Paxos. It was meant to be more understandable than Paxos by means of separation of logic, but it is also formally proven safe and offers some additional features.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "demo": "tsc & node ./src/demo.js",
+    "start": "tsc & node ./src/app.js"
   },
   "repository": {
     "type": "git",

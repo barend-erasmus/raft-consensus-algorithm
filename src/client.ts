@@ -9,13 +9,14 @@ export class Client {
     private id: string;
     private state: string;
     public heartbeatTimeoutTimestamp: number;
-    public stateTimeoutTimestamp: number;
+    public electionTimeoutTimestamp: number;
     private app: express.Application;
-    private isAppRunning: boolean = false;
+    private term: number;
     private interval;
 
     constructor(private port: number, private clients: string[]) {
         this.id = uuid.v4();
+        this.term = 0;
         this.setAsFollower();
 
         this.app = express();
@@ -31,10 +32,8 @@ export class Client {
     }
 
     public start(): void {
-        if (!this.isAppRunning) {
-            this.app.listen(this.port);
-            this.isAppRunning = true;
-        }
+
+        this.app.listen(this.port);
 
         this.interval = setInterval(() => {
             this.cycle();
@@ -43,11 +42,7 @@ export class Client {
     }
 
     public stop() {
-        console.log('aa')
-        if (this.isLeader()) {
-            console.log(`${this.id}: Stopped`);
-            clearInterval(this.interval);
-        }
+        clearInterval(this.interval);
     }
 
     private cycle(): void {
@@ -58,7 +53,7 @@ export class Client {
                 // Do nothing
             }
         } else if (this.isCandidate()) {
-            if (this.hasExceededStateTimeout()) {
+            if (this.hasExceededElectionTimeout()) {
                 this.sendVoteRequests();
             }
         } else if (this.isLeader()) {
@@ -76,19 +71,24 @@ export class Client {
     }
 
     private vote(req: express.Request, res: express.Response): void {
-        res.json(true);
+        const result = req.query.term > this.term;
+
+        res.json(result);
     }
 
     public sendVoteRequests(): void {
         const self = this;
         co(function* () {
+
+            self.incrementTerm();
+
             let count = 0;
 
             for (const client of self.clients) {
 
                 try {
                     const result: boolean = yield request({
-                        uri: `${client}/vote`,
+                        uri: `${client}/vote?term=${self.term}`,
                         json: true
                     });
 
@@ -101,7 +101,7 @@ export class Client {
                 }
             }
 
-            if (count > Math.floor((self.clients.length + 1) / 2)) {
+            if (count > Math.floor((self.clients.length) / 2)) {
                 console.log(`${self.id}: I'm the leader!!`);
                 self.setAsLeader();
             }
@@ -111,27 +111,27 @@ export class Client {
     private setAsFollower(): void {
         this.state = 'follower';
         this.resetHeartBeatTimeout();
-        this.stateTimeoutTimestamp = null;
+        this.electionTimeoutTimestamp = null;
     }
 
     private setAsCandidate(): void {
         this.state = 'candidate';
         this.clearHeartBeatTimeout();
-        this.stateTimeoutTimestamp = new Date().getTime() + this.getRandomArbitrary(1000, 4000);
+        this.electionTimeoutTimestamp = new Date().getTime() + this.getRandomArbitrary(1000, 4000);
     }
 
     private setAsLeader(): void {
         this.state = 'leader';
         this.clearHeartBeatTimeout();
-        this.stateTimeoutTimestamp = null;
+        this.electionTimeoutTimestamp = null;
     }
 
     private hasExceededHeartbeatTimeout(): boolean {
         return new Date().getTime() > this.heartbeatTimeoutTimestamp;
     }
 
-    private hasExceededStateTimeout(): boolean {
-        return new Date().getTime() > this.stateTimeoutTimestamp;
+    private hasExceededElectionTimeout(): boolean {
+        return new Date().getTime() > this.electionTimeoutTimestamp;
     }
 
     private resetHeartBeatTimeout(): void {
@@ -140,6 +140,10 @@ export class Client {
 
     private clearHeartBeatTimeout(): void {
         this.heartbeatTimeoutTimestamp = null;
+    }
+
+    private incrementTerm(): void {
+        this.term = this.term + 1;
     }
 
     private sendHeartbeat(): void {

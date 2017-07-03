@@ -1,45 +1,45 @@
-// Imports
-import { Node } from './node';
+import { Client } from './client';
 
-const node1: Node = new Node();
-const node2: Node = new Node();
-const node3: Node = new Node();
+const client1 = new Client(7801, [
+    'http://localhost:7802',
+    'http://localhost:7803',
+    'http://localhost:7804',
+]);
 
-const nodes: Node[] = [
-    node1, node2, node3
-];
+const client2 = new Client(7802, [
+    'http://localhost:7801',
+    'http://localhost:7803',
+    'http://localhost:7804',
+]);
 
-console.log('start');
+const client3 = new Client(7803, [
+    'http://localhost:7801',
+    'http://localhost:7802',
+    'http://localhost:7804',
+]);
 
-setInterval(() => {
-    cycleNode(node1);
-}, 100);
-
-setInterval(() => {
-    cycleNode(node2);
-}, 100);
-
-setInterval(() => {
-    cycleNode(node3);
-}, 100);
-
-setInterval(() => {
-    console.log(nodes.map((x) => x.state));
-}, 1000);
+const client4 = new Client(7804, [
+    'http://localhost:7801',
+    'http://localhost:7802',
+    'http://localhost:7803',
+]);
 
 
-function cycleNode(node: Node) {
-    if (node.isFollower()) {
-        if (node.hasExceededHeartbeatTimeout()) {
-            node.setAsCandidate();
-        } else {
-            // Do nothing
-        }
-    } else if (node.isCandidate()) {
-        if (node.hasExceededStateTimeout()) {
-            node.sendVoteRequests(nodes);
-        }
-    } else if (node.isLeader()) {
-        node.sendHeartbeat(nodes);
-    }
-}
+client1.start();
+client2.start();
+client3.start();
+client4.start();
+
+setTimeout(() => {
+    // client1.stop();
+    // client2.stop();
+    // client3.stop();
+    // client4.stop();
+}, 7803);
+
+setTimeout(() => {
+    // client1.start();
+    // client2.start();
+    // client3.start();
+    // client4.start();
+}, 10000);
