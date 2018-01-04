@@ -4,6 +4,8 @@
   "description": "Raft is a consensus algorithm designed as an alternative to Paxos. It was meant to be more understandable than Paxos by means of separation of logic, but it is also formally proven safe and offers some additional features.",
   "main": "index.js",
   "scripts": {
+    "test": "tsc & mocha ./src/**/*.test.js",
+    "coverage": "tsc & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js",
     "demo": "tsc & node ./src/demo.js",
     "start": "tsc & node ./src/app.js"
   },
@@ -18,15 +20,21 @@
   },
   "homepage": "https://github.com/barend-erasmus/raft-consensus-algorithm#readme",
   "devDependencies": {
+    "@types/chai": "^4.0.10",
     "@types/express": "^4.0.36",
-    "@types/node": "^8.0.7"
+    "@types/mocha": "^2.2.45",
+    "@types/node": "^8.0.7",
+    "@types/sinon": "^4.1.2",
+    "chai": "^4.1.2",
+    "mocha": "^4.1.0",
+    "sinon": "^4.1.3"
   },
   "dependencies": {
     "body-parser": "^1.17.2",
-    "co": "^4.6.0",
     "express": "^4.15.3",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
-    "uuid": "^3.1.0"
+    "uuid": "^3.1.0",
+    "yargs": "^10.0.3"
   }
 }

@@ -1,91 +1,97 @@
+import { ITransportLayer } from "./transport";
+
 export class Node {
 
-    public state: string;
-    public heartbeatTimeoutTimestamp: number;
-    public electionTimeoutTimestamp: number;
-    public term: number;
+    public lastHeartbeatTimestamp: number = null;
 
-    constructor() {
-        this.setAsFollower();
-        this.term = 0;
+    public heartbeatTimeout: number = 3000;
+
+    public electionTimeout: number = null;
+
+    public term: number = 0;
+
+    public state: string = 'follower';
+
+    public leader: string = null;
+
+    constructor(public id: string, public transportLayer: ITransportLayer) {
+
     }
 
-    public setAsFollower(): void {
-        this.state = 'follower';
-        this.setHeartBeatTimeout();
-        this.electionTimeoutTimestamp = null;
+    public async tick(): Promise<void> {
+        if (this.state === 'follower' && this.timedOut()) {
+            this.state = 'candidate';
+        } else if (this.state === 'candidate') {
+            await this.election();
+        } else if (this.state === 'leader') {
+            await this.sendHeartbeat();
+        }
+
+        console.log(`${this.state} - Leader: ${this.leader} [${this.term}]`);
     }
 
-    public setAsCandidate(): void {
-        this.state = 'candidate';
-        this.clearHeartBeatTimeout();
-        this.electionTimeoutTimestamp = new Date().getTime() + this.getRandomArbitrary(1000, 4000);
-    }
+    public async election(): Promise<void> {
 
-    public setAsLeader(): void {
-        this.state = 'leader';
-        this.clearHeartBeatTimeout();
-        this.electionTimeoutTimestamp = null;
-    }
+        this.term ++;
 
-    public hasExceededHeartbeatTimeout(): boolean {
-        return new Date().getTime() > this.heartbeatTimeoutTimestamp;
-    }
+        let numberOfVotes: number = 1;
+        let numberOfNodes: number = 1;
 
-    public hasExceededStateTimeout(): boolean {
-        return new Date().getTime() > this.electionTimeoutTimestamp;
-    }
+        const tasks = this.transportLayer.nodes.filter((node) => node !== this.id).map((node) => this.transportLayer.requestVote(this.term, this.id, node));
 
-    public setHeartBeatTimeout(): void {
-        this.heartbeatTimeoutTimestamp = new Date().getTime() + 1000;
-    }
+        const results = await Promise.all(tasks);
 
-    public clearHeartBeatTimeout(): void {
-        this.heartbeatTimeoutTimestamp = null;
-    }
-
-    public sendVoteRequests(nodes: Node[]): void {
-        let count = 0;
-        this.term = this.term + 1;
-
-        for (const node of nodes) {
-            if (node.getVote(this.term)) {
-                count = count + 1;
+        for (const result of results) {
+            if (result !== null && result === true) {
+                numberOfVotes ++;
+                numberOfNodes ++;
+            }else if (result !== null && result === false) {
+                numberOfNodes ++;
             }
         }
 
-        for (const node of nodes) {
-           node.setAsFollower();
-        }
+        console.log(`Recieved ${numberOfVotes} votes`);
 
-        if (count > Math.floor(nodes.length / 2)) {
-            this.setAsLeader();
-        }
-    }
-
-    public sendHeartbeat(nodes: Node[]): void {
-        for (const node of nodes) {
-            node.setHeartBeatTimeout();
+        if (numberOfVotes > 3 && numberOfVotes > numberOfNodes / 2) {
+            this.state = 'leader';
+            this.leader = null;
         }
     }
 
-    public getVote(term: number): boolean {
-        return term > this.term;
+    public async heartbeat(term: number, nodeId: string): Promise<void> {
+        if (term === this.term) {
+            this.lastHeartbeatTimestamp = new Date().getTime();
+            this.state = 'follower';
+            this.leader = nodeId;
+        } else if (term > this.term) {
+            this.term = term;
+            this.lastHeartbeatTimestamp = new Date().getTime();
+            this.state = 'follower';
+            this.leader = nodeId;
+        }
     }
 
-    public isFollower(): boolean {
-        return this.state === 'follower';
+    public async sendHeartbeat(): Promise<void> {
+        const tasks = this.transportLayer.nodes.filter((node) => node !== this.id).map((node) => this.transportLayer.sendHeartbeat(this.term, this.id, node));
+
+        const results = await Promise.all(tasks);
     }
 
-    public isCandidate(): boolean {
-        return this.state === 'candidate';
+    public vote(term: number, node: string): boolean {
+        if (term > this.term) {
+            this.term = term;
+            this.leader = node;
+            return true;
+        } else {
+            return false;
+        }
     }
 
-    public isLeader(): boolean {
-        return this.state === 'leader';
-    }
+    public timedOut(): boolean {
+        if (!this.lastHeartbeatTimestamp) {
+            return true;
+        }
 
-    private getRandomArbitrary(min: number, max: number) {
-        return Math.random() * (max - min) + min;
+        return new Date().getTime() - this.lastHeartbeatTimestamp > this.heartbeatTimeout;
     }
 }
