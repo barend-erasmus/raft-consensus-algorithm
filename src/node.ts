@@ -18,18 +18,6 @@ export class Node {
 
     }
 
-    public async tick(): Promise<void> {
-        if (this.state === 'follower' && this.timedOut()) {
-            this.state = 'candidate';
-        } else if (this.state === 'candidate') {
-            await this.election();
-        } else if (this.state === 'leader') {
-            await this.sendHeartbeat();
-        }
-
-        console.log(`${this.state} - Leader: ${this.leader} [${this.term}]`);
-    }
-
     public async election(): Promise<void> {
 
         this.term ++;
@@ -49,8 +37,6 @@ export class Node {
                 numberOfNodes ++;
             }
         }
-
-        console.log(`Recieved ${numberOfVotes} votes`);
 
         if (numberOfVotes > 3 && numberOfVotes > numberOfNodes / 2) {
             this.state = 'leader';
@@ -77,14 +63,16 @@ export class Node {
         const results = await Promise.all(tasks);
     }
 
-    public vote(term: number, node: string): boolean {
-        if (term > this.term) {
-            this.term = term;
-            this.leader = node;
-            return true;
-        } else {
-            return false;
+    public async tick(): Promise<void> {
+        if (this.state === 'follower' && this.timedOut()) {
+            this.state = 'candidate';
+        } else if (this.state === 'candidate') {
+            await this.election();
+        } else if (this.state === 'leader') {
+            await this.sendHeartbeat();
         }
+
+        console.log(`${this.state} - Leader: ${this.leader} [${this.term}]`);
     }
 
     public timedOut(): boolean {
@@ -93,5 +81,15 @@ export class Node {
         }
 
         return new Date().getTime() - this.lastHeartbeatTimestamp > this.heartbeatTimeout;
+    }
+
+    public vote(term: number, node: string): boolean {
+        if (term > this.term) {
+            this.term = term;
+            this.leader = node;
+            return true;
+        } else {
+            return false;
+        }
     }
 }
