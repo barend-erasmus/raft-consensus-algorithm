@@ -6,8 +6,7 @@
   "scripts": {
     "test": "tsc & mocha ./src/**/*.test.js",
     "coverage": "tsc & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js",
-    "demo": "tsc & node ./src/demo.js",
-    "start": "tsc & node ./src/app.js"
+    "start": "tsc & node ./src/main.js"
   },
   "repository": {
     "type": "git",
