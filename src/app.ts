@@ -19,6 +19,8 @@ transportLayer.setNode(node);
 function start() {
     setTimeout(() => {
         node.tick().then(() => {
+            console.log(`${node.state} - Leader: ${node.leader} [${node.term}]`);
+
             start();
         });
     }, 1500);

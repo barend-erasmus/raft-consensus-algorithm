@@ -67,8 +67,6 @@ export class Node {
         } else if (this.state === 'leader') {
             await this.sendHeartbeat();
         }
-
-        console.log(`${this.state} - Leader: ${this.leader} [${this.term}]`);
     }
 
     public timedOut(): boolean {
