@@ -145,7 +145,7 @@ describe('Node', () => {
     // });
 
     describe('election', () => {
-        it('state equals leader given received more than 3 votes and received more than half the votes', async () => {
+        it('state equals leader given more than 3 votes and more than half the votes', async () => {
             const transportLayer = new InMemoryTransportLayer();
             const requestVoteStub = sinon.stub(transportLayer, 'requestVote');
             requestVoteStub.onCall(0).returns(Promise.resolve(true));
@@ -172,7 +172,7 @@ describe('Node', () => {
             expect(node1.state).to.be.eq('leader');
         });
 
-        it('state equals candidate given received more than 3 votes and received less than half the votes', async () => {
+        it('state equals candidate given more than 3 votes and less than half the votes', async () => {
             const transportLayer = new InMemoryTransportLayer();
             const requestVoteStub = sinon.stub(transportLayer, 'requestVote');
             requestVoteStub.onCall(0).returns(Promise.resolve(true));
@@ -199,7 +199,7 @@ describe('Node', () => {
             expect(node1.state).to.be.eq('candidate');
         });
 
-        it('state equals candidate given received less than 3 votes and received more than half the votes', async () => {
+        it('state equals candidate given less than 3 votes and more than half the votes', async () => {
             const transportLayer = new InMemoryTransportLayer();
             const requestVoteStub = sinon.stub(transportLayer, 'requestVote');
             requestVoteStub.onCall(0).returns(Promise.resolve(true));
@@ -245,6 +245,86 @@ describe('Node', () => {
             await node1.election();
 
             expect(node1.state).to.be.eq('candidate');
+        });
+    });
+
+    describe('heartbeat', () => {
+        it('state equals follower given heartbeat equal term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(0, 'node2');
+
+            expect(node1.state).to.be.eq('follower');
+        });
+
+        it('leader equals node id given heartbeat equal term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(0, 'node2');
+
+            expect(node1.leader).to.be.eq('node2');
+        });
+
+        it('state equals follower given heartbeat greater term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(1, 'node2');
+
+            expect(node1.state).to.be.eq('follower');
+        });
+
+        it('leader equals node id given heartbeat greater term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(1, 'node2');
+
+            expect(node1.leader).to.be.eq('node2');
+        });
+
+        it('term equals new term given heartbeat greater term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(1, 'node2');
+
+            expect(node1.term).to.be.eq(1);
+        });
+
+        it('term remains the same given heartbeat smaller term', async () => {
+            const transportLayer = new InMemoryTransportLayer();
+
+            const node1 = new Node('1', transportLayer);
+            node1.state = 'leader';
+
+            transportLayer.addNode(node1);
+
+            await node1.heartbeat(-1, 'node2');
+
+            expect(node1.term).to.be.eq(0);
         });
     });
 });

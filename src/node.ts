@@ -20,7 +20,7 @@ export class Node {
 
     public async election(): Promise<void> {
 
-        this.term ++;
+        this.term++;
 
         let numberOfVotes: number = 1;
         let numberOfNodes: number = 1;
@@ -31,10 +31,10 @@ export class Node {
 
         for (const result of results) {
             if (result !== null && result === true) {
-                numberOfVotes ++;
-                numberOfNodes ++;
-            }else if (result !== null && result === false) {
-                numberOfNodes ++;
+                numberOfVotes++;
+                numberOfNodes++;
+            } else if (result !== null && result === false) {
+                numberOfNodes++;
             }
         }
 
@@ -45,11 +45,7 @@ export class Node {
     }
 
     public async heartbeat(term: number, nodeId: string): Promise<void> {
-        if (term === this.term) {
-            this.lastHeartbeatTimestamp = new Date().getTime();
-            this.state = 'follower';
-            this.leader = nodeId;
-        } else if (term > this.term) {
+        if (term >= this.term) {
             this.term = term;
             this.lastHeartbeatTimestamp = new Date().getTime();
             this.state = 'follower';
